@@ -19,7 +19,8 @@ from contextlib import redirect_stdout
 from PIL import Image, ImageDraw
 
 ICI = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(ICI, "..", "scelle"))
+# le code est dans scelle/ (dépôt du module) ou juste au-dessus (dans le jeu, Contenu/Scelle/Outils/)
+sys.path.insert(0, os.path.join(ICI, "..", "scelle") if os.path.isdir(os.path.join(ICI, "..", "scelle")) else os.path.join(ICI, ".."))
 
 import chemins  # noqa: E402
 import modeles  # noqa: E402
