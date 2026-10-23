@@ -23,6 +23,7 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(ICI, "..", "scelle") if os.path.isdir(os.path.join(ICI, "..", "scelle")) else os.path.join(ICI, ".."))
 
 import chemins  # noqa: E402
+import detourage  # noqa: E402
 import modeles  # noqa: E402
 import scelle  # noqa: E402
 import series  # noqa: E402
@@ -101,6 +102,25 @@ class TestSerieAutomatique(unittest.TestCase):
 		trouvees, _ = series.illustrations(SERIE)
 		self.assertEqual(len(trouvees), 7)
 		self.assertTrue(all(t["art"].endswith("_ultra.webp") for t in trouvees))
+
+	def test_common_deja_detouree(self):
+		# Une Common sur fond transparent est prise telle quelle, sans rembg.
+		d = chemins.jeu("CardForge", "series", SERIE)
+		base = os.path.join(d, "bestiole_0_base.webp")
+		gardee = open(base, "rb").read()
+		try:
+			im = Image.new("RGBA", (300, 420), (0, 0, 0, 0))
+			ImageDraw.Draw(im).ellipse((70, 120, 230, 330), fill=(200, 60, 60, 255))
+			im.save(base)
+			trouvees, _ = series.illustrations(SERIE)
+			self.assertTrue(trouvees[0]["art"].endswith("bestiole_0_base.webp"))
+			self.assertTrue(all(t["art"].endswith("_ultra.webp") for t in trouvees[1:]))
+			sortie = os.path.join(self.jeu, "deja.webp")
+			modele, note, accord = detourage.detourer_fichier(base, sortie)
+			self.assertEqual((modele, accord), ("deja", 1.0))
+			self.assertGreater(note, 0.5)
+		finally:
+			open(base, "wb").write(gardee)
 
 	def test_fiche(self):
 		fiche = series.lire(SERIE)
