@@ -102,10 +102,13 @@ def illustrations(cle):
 			images = {k.get("rarity"): k.get("image") for k in cartes if k.get("creature") == c["id"]}
 			detourees = [n for n in (images.get("common"), "%s_base.webp" % c["id"])
 				if n and os.path.exists(os.path.join(dossier, n)) and detourage.deja_detouree(os.path.join(dossier, n))]
-			for nom in detourees[:1] + [images.get("ultra"), "%s_ultra.webp" % c["id"], images.get("holo"), images.get("common"), "%s_base.webp" % c["id"]]:
-				if nom and os.path.exists(os.path.join(dossier, nom)):
-					trouvees.append({"creature": c["id"], "art": chemins.relatif(os.path.join(dossier, nom))})
-					break
+			peintes = [n for n in (images.get("ultra"), "%s_ultra.webp" % c["id"], images.get("holo"), images.get("common"), "%s_base.webp" % c["id"])
+				if n and os.path.exists(os.path.join(dossier, n))]
+			if peintes:
+				# "art": what the monster is cut from; "reference": the full illustration
+				# (style and palette are judged on it, not on a cut-out's empty background).
+				trouvees.append({"creature": c["id"], "art": chemins.relatif(os.path.join(dossier, (detourees or peintes)[0])),
+					"reference": chemins.relatif(os.path.join(dossier, peintes[0]))})
 		return trouvees, serie
 	cartes = []
 	for p in sorted(glob.glob(chemins.jeu("CardForge", "data", "cards", "*.json"))):
@@ -258,7 +261,9 @@ def creer(cle, moteur="rembg", style=None, journal=print):
 	if not trouvees:
 		raise SystemExit("Aucune illustration trouvée pour %s dans CardForge." % cle)
 	arts = [t["art"] for t in trouvees]
-	style = style or genre(arts)
+	# Style and palette from the full illustrations (the cut-out Commons have no background).
+	reference = {t["art"]: t.get("reference", t["art"]) for t in trouvees}
+	style = style or genre(list(reference.values()))
 	journal("%s : %d illustrations, style %s" % (cle, len(arts), style))
 	modeles = detourage.MODELES
 	candidats = []
@@ -278,7 +283,7 @@ def creer(cle, moteur="rembg", style=None, journal=print):
 		"style": style,
 		"logo": logo,
 		"police": "serif" if style == "mythic" else "ronde",
-		**palette([h["art"] for h in heros] + [f["art"] for f in figurants], style),
+		**palette([reference[h["art"]] for h in heros] + [reference[f["art"]] for f in figurants], style),
 		"heros": [{"art": h["art"], "modele": h["modele"]} for h in heros],
 		"figurants": [{"art": f["art"], "modele": f["modele"]} for f in figurants],
 		"candidats": sorted(candidats, key=lambda c: -c["qualite"]),
