@@ -85,7 +85,9 @@ def verifier_fiche(cle, fiche):
 # --------------------------------------------------------------------------- découverte
 
 def illustrations(cle):
-	"""Les illustrations de la série dans CardForge, une par créature (l'Ultra de préférence).
+	"""Les illustrations de la série dans CardForge, une par créature : la Common si elle
+	est déjà détourée (fond transparent : son contour est le bon, sans rembg), sinon
+	l'Ultra de préférence.
 
 	Format des nouvelles séries : CardForge/series/<id>/serie.json et ses images ;
 	format historique (Mythic Origins) : CardForge/data/cards/*.json et
@@ -98,7 +100,9 @@ def illustrations(cle):
 		cartes = serie.get("cards", [])
 		for c in serie.get("creatures", []):
 			images = {k.get("rarity"): k.get("image") for k in cartes if k.get("creature") == c["id"]}
-			for nom in (images.get("ultra"), "%s_ultra.webp" % c["id"], images.get("holo"), images.get("common"), "%s_base.webp" % c["id"]):
+			detourees = [n for n in (images.get("common"), "%s_base.webp" % c["id"])
+				if n and os.path.exists(os.path.join(dossier, n)) and detourage.deja_detouree(os.path.join(dossier, n))]
+			for nom in detourees[:1] + [images.get("ultra"), "%s_ultra.webp" % c["id"], images.get("holo"), images.get("common"), "%s_base.webp" % c["id"]]:
 				if nom and os.path.exists(os.path.join(dossier, nom)):
 					trouvees.append({"creature": c["id"], "art": chemins.relatif(os.path.join(dossier, nom))})
 					break

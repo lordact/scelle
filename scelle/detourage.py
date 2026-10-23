@@ -147,13 +147,34 @@ def accord(a, b):
 	return float((a & b).sum() / max(1, (a | b).sum()))
 
 
+def deja_detouree(source):
+	"""Vrai pour une illustration déjà détourée (les Common de CardForge : le monstre
+	sur un fond transparent) : elle n'a pas besoin de rembg."""
+	try:
+		im = Image.open(source)
+	except OSError:
+		return False
+	if "A" not in im.getbands():
+		return False
+	a = np.asarray(im.getchannel("A").resize((128, 128)))
+	return (a < 8).mean() > 0.15 and (a > 248).mean() > 0.05
+
+
 def detourer_fichier(source, sortie, moteur="rembg", modeles=MODELES):
 	"""Détoure une illustration avec chaque modèle et garde le meilleur.
 
 	La note finale est la qualité du meilleur détourage pondérée par l'accord
 	entre les modèles : un monstre que les deux modèles voient différemment (l'un
 	prend le sol avec, l'autre en oublie la moitié) passe derrière les autres.
+	Une illustration déjà détourée (deja_detouree) garde son propre contour :
+	modèle « deja », accord 1.
 	Rend (modèle retenu, note, accord)."""
+	if deja_detouree(source):
+		im = Image.open(source).convert("RGBA")
+		rgba = decouper(im, np.asarray(im.getchannel("A"), float))
+		os.makedirs(os.path.dirname(sortie), exist_ok=True)
+		rgba.save(sortie, "WEBP", quality=90, method=6)
+		return "deja", qualite(rgba, im.size), 1.0
 	im = Image.open(source).convert("RGB")
 	essais = []
 	for modele in (modeles if moteur == "rembg" else ("simple",)):
